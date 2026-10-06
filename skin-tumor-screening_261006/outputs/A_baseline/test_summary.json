@@ -1,0 +1,22 @@
+{
+  "experiment": "A_baseline",
+  "split": "test",
+  "n": 1987,
+  "aug": false,
+  "balance": "none",
+  "accuracy": 0.8339204831404127,
+  "balanced_accuracy": 0.6966848320616236,
+  "macro_f1": 0.6957029552758437,
+  "recall": {
+    "akiec": 0.7285714285714285,
+    "bcc": 0.7040816326530612,
+    "bkl": 0.6555023923444976,
+    "df": 0.36363636363636365,
+    "mel": 0.4808510638297872,
+    "nv": 0.9441509433962264,
+    "vasc": 1.0
+  },
+  "malignant_recall": 0.707196029776675,
+  "malignant_precision": 0.7744565217391305,
+  "benign_false_alarm": 0.052398989898989896
+}

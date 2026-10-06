@@ -1,0 +1,7 @@
+# torch, torchvision은 이미 conda GPU 환경에 설치되어 있으므로 여기서 설치하지 않음 (pip로 덮어쓰면 CPU 버전이 됨)
+numpy
+pandas
+pillow
+matplotlib
+scikit-learn
+tqdm

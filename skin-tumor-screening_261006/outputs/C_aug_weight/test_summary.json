@@ -1,0 +1,22 @@
+{
+  "experiment": "C_aug_weight",
+  "split": "test",
+  "n": 1987,
+  "aug": true,
+  "balance": "weight",
+  "accuracy": 0.7961751383995974,
+  "balanced_accuracy": 0.7592364014630554,
+  "macro_f1": 0.6620729321877887,
+  "recall": {
+    "akiec": 0.7142857142857143,
+    "bcc": 0.8469387755102041,
+    "bkl": 0.6220095693779905,
+    "df": 0.6818181818181818,
+    "mel": 0.5914893617021276,
+    "nv": 0.8581132075471698,
+    "vasc": 1.0
+  },
+  "malignant_recall": 0.7766749379652605,
+  "malignant_precision": 0.6348884381338742,
+  "benign_false_alarm": 0.11363636363636363
+}

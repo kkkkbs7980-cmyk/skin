@@ -1,0 +1,16 @@
+설정: 가짜 털: 어두운 곡선 0~8개를 무작위로 그림(확률 50%)
+
+data: data
+out: outputs_3cls/06_hair
+aug: ['hair']
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 10 (검증 balanced acc 75.6%)
+총 학습 시간: 6.7분

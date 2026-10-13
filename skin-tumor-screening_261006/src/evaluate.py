@@ -1,11 +1,13 @@
-"""학습된 모델을 test 로 평가.
+"""학습된 3분류 모델을 test 로 평가.
 
-실행: python src/evaluate.py --data data --ckpt outputs/A_baseline/best.pt
+실행: python src/evaluate.py --data data --ckpt outputs_3cls/00_baseline/best.pt
 
 만들어지는 것 (ckpt 와 같은 폴더):
-    test_result.txt        정확도, balanced accuracy, macro F1, 클래스별 recall, 악성 위험도 판정
-    test_summary.json      compare.py 가 실험끼리 표로 묶을 때 쓰는 숫자
-    confusion_matrix.png   혼동행렬 그림 (미팅 때 보여줄 것)
+    test_result.txt        결과표(행=클래스, 열=지표) + 참고 지표 + 악성 위험도 판정
+    test_summary.json      클래스별 recall/precision/F1/AUC, accuracy (compare.py 가 결과표.md 만들 때 씀)
+    confusion_matrix.png   혼동행렬 그림 (보고서용)
+
+표 괄호 안 숫자 = 원본(outputs_3cls/00_baseline) 대비 증가폭(%p). 원본 결과가 아직 없으면 괄호 없음.
 """
 import argparse
 import json
@@ -13,12 +15,14 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from sklearn.metrics import (ConfusionMatrixDisplay, balanced_accuracy_score, classification_report,
-                             confusion_matrix, f1_score, recall_score)
+from sklearn.metrics import (ConfusionMatrixDisplay, balanced_accuracy_score, confusion_matrix,
+                             precision_recall_fscore_support, roc_auc_score)
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from common import CLASS_KO, CLASSES, MALIGNANT, HamDataset, build_model, get_device, setup_korean_font
+from common import GROUP_KO, GROUPS, HamDataset, build_model, get_device, result_table, setup_korean_font
+
+BASELINE_NAME = "00_baseline"
 
 
 @torch.no_grad()
@@ -32,92 +36,98 @@ def predict(model, loader, device):
     return torch.cat(probs).numpy(), torch.cat(labels).numpy()
 
 
+def load_baseline(exp_dir, split):
+    """같은 outputs_3cls 폴더 안의 00_baseline 결과. 없으면 None."""
+    f = Path(exp_dir).parent / BASELINE_NAME / f"{split}_summary.json"
+    if f.exists():
+        return json.loads(f.read_text(encoding="utf-8"))
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data")
-    parser.add_argument("--ckpt", default="outputs/A_baseline/best.pt")
+    parser.add_argument("--ckpt", default="outputs_3cls/00_baseline/best.pt")
     parser.add_argument("--split", default="test", choices=["val", "test"])
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--malignant-threshold", type=float, default=0.5,
-                        help="악성·전암 3종(mel, bcc, akiec) 확률 합이 이 값을 넘으면 '전문의 상담 권고'")
+                        help="악성 확률이 이 값 이상이면 '전문의 상담 권고' (참고용, 표에는 안 넣음)")
     args = parser.parse_args()
 
     device = get_device()
     ckpt = torch.load(args.ckpt, map_location=device, weights_only=False)
-    assert ckpt["classes"] == CLASSES
-    model = build_model(len(CLASSES), ckpt["arch"], pretrained=False).to(device)
+    if ckpt["classes"] != GROUPS:
+        raise ValueError(f"이 모델은 3분류 모델이 아님 (classes={ckpt['classes']})")
+    model = build_model(len(GROUPS), ckpt["arch"], pretrained=False).to(device)
     model.load_state_dict(ckpt["model"])
 
-    ds = HamDataset(args.data, args.split, ckpt["img_size"], aug=False)
+    ds = HamDataset(args.data, args.split, ckpt["img_size"], aug=())
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     probs, y_true = predict(model, loader, device)
     y_pred = probs.argmax(1)
+    labels = list(range(len(GROUPS)))
 
-    acc = (y_pred == y_true).mean()
-    bal_acc = balanced_accuracy_score(y_true, y_pred)
-    macro_f1 = f1_score(y_true, y_pred, average="macro")
-    recalls = recall_score(y_true, y_pred, average=None, labels=range(len(CLASSES)))
-    majority = np.bincount(y_true).max() / len(y_true)
+    acc = float((y_pred == y_true).mean())
+    bal_acc = float(balanced_accuracy_score(y_true, y_pred))
+    prec, rec, f1, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels, zero_division=0)
+    auc = []
+    for k in labels:  # 클래스별 one-vs-rest AUC (softmax 확률)
+        pos = (y_true == k)
+        auc.append(float(roc_auc_score(pos, probs[:, k])) if 0 < pos.sum() < len(pos) else float("nan"))
 
-    # 2단계 출력: 악성·전암 3종 확률 합 -> 전문의 상담 권고 여부
-    mal_idx = [CLASSES.index(c) for c in MALIGNANT]
-    mal_prob = probs[:, mal_idx].sum(1)
-    is_mal_true = np.isin(y_true, mal_idx)
-    is_mal_pred = mal_prob >= args.malignant_threshold
+    # 2단계 출력(참고): 악성 확률 >= 임계값 → 전문의 상담 권고
+    mal = GROUPS.index("malignant")
+    is_mal_true = y_true == mal
+    is_mal_pred = probs[:, mal] >= args.malignant_threshold
     mal_recall = (is_mal_pred & is_mal_true).sum() / max(is_mal_true.sum(), 1)
-    mal_precision = (is_mal_pred & is_mal_true).sum() / max(is_mal_pred.sum(), 1)
-    benign_as_mal = (is_mal_pred & ~is_mal_true).sum() / max((~is_mal_true).sum(), 1)
+    false_alarm = (is_mal_pred & ~is_mal_true).sum() / max((~is_mal_true).sum(), 1)
 
-    names = [f"{c} {CLASS_KO[c]}" for c in CLASSES]
-    report = classification_report(y_true, y_pred, labels=range(len(CLASSES)), target_names=names, digits=3)
-    exp_name = Path(args.ckpt).parent.name
+    exp_dir = Path(args.ckpt).parent
+    exp_name = exp_dir.name
+    summary = {
+        "experiment": exp_name, "split": args.split, "n": int(len(ds)),
+        "aug": ckpt.get("aug", []), "aug_desc": ckpt.get("aug_desc", ""), "balance": ckpt.get("balance", "none"),
+        "epochs": ckpt.get("epochs", "?"), "best_epoch": ckpt.get("epoch", "?"),
+        "recall": {g: float(v) for g, v in zip(GROUPS, rec)},
+        "precision": {g: float(v) for g, v in zip(GROUPS, prec)},
+        "f1": {g: float(v) for g, v in zip(GROUPS, f1)},
+        "auc": dict(zip(GROUPS, auc)),
+        "accuracy": acc, "balanced_accuracy": bal_acc,
+        "malignant_alarm_recall": float(mal_recall), "nonmalignant_false_alarm": float(false_alarm),
+    }
+
+    table = result_table(summary, load_baseline(exp_dir, args.split))
+    counts = np.bincount(y_true, minlength=len(GROUPS))
     lines = [
-        f"실험: {exp_name}   (증강 {'켬' if ckpt.get('aug') else '끔'}, 불균형 보정 {ckpt.get('balance', 'none')}, "
-        f"best epoch {ckpt.get('epoch', '?')})",
-        f"평가 split: {args.split}  ({len(ds)}장)   모델: {ckpt['arch']}  입력 크기: {ckpt['img_size']}",
+        f"실험: {exp_name}   평가 split: {args.split} ({len(ds)}장: "
+        + ", ".join(f"{GROUP_KO[g]} {c}" for g, c in zip(GROUPS, counts)) + ")",
         "",
-        f"정확도(accuracy):          {acc:.2%}   (전부 nv 로 찍으면 {majority:.1%})",
-        f"balanced accuracy:         {bal_acc:.2%}   <- 클래스별 recall 의 평균. 불균형 데이터에서 진짜 실력",
-        f"macro F1:                  {macro_f1:.3f}",
-        f"악성흑색종(mel) recall:    {recalls[CLASSES.index('mel')]:.2%}   <- 놓치면 안 되는 것",
+        table,
         "",
-        f"[악성 위험도 2단계 판정] mel+bcc+akiec 확률 합 >= {args.malignant_threshold} 이면 '전문의 상담 권고'",
-        f"  악성·전암 recall (실제 악성·전암 중 잡아낸 비율): {mal_recall:.2%}",
-        f"  악성·전암 precision: {mal_precision:.2%}",
-        f"  양성을 악성으로 잘못 경고한 비율: {benign_as_mal:.2%}",
-        "",
-        "[클래스별 결과]",
-        report,
+        f"(참고) balanced accuracy: {bal_acc:.2%}",
+        f"(참고) 악성 확률 >= {args.malignant_threshold} → '전문의 상담 권고' 판정 시: "
+        f"실제 악성 중 권고 {mal_recall:.1%}, 악성 아닌데 권고 {false_alarm:.1%}",
     ]
     text = "\n".join(lines)
     print(text)
-    out_dir = Path(args.ckpt).parent
-    (out_dir / f"{args.split}_result.txt").write_text(text, encoding="utf-8")
-
-    summary = {
-        "experiment": exp_name, "split": args.split, "n": int(len(ds)),
-        "aug": bool(ckpt.get("aug")), "balance": ckpt.get("balance", "none"),
-        "accuracy": float(acc), "balanced_accuracy": float(bal_acc), "macro_f1": float(macro_f1),
-        "recall": {c: float(r) for c, r in zip(CLASSES, recalls)},
-        "malignant_recall": float(mal_recall), "malignant_precision": float(mal_precision),
-        "benign_false_alarm": float(benign_as_mal),
-    }
-    (out_dir / f"{args.split}_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2),
+    (exp_dir / f"{args.split}_result.txt").write_text(text, encoding="utf-8")
+    (exp_dir / f"{args.split}_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2),
                                                         encoding="utf-8")
 
     setup_korean_font()
     import matplotlib.pyplot as plt
-    cm = confusion_matrix(y_true, y_pred, labels=range(len(CLASSES)))
-    fig, ax = plt.subplots(figsize=(8, 7))
-    ConfusionMatrixDisplay(cm, display_labels=CLASSES).plot(ax=ax, colorbar=False, cmap="Blues")
-    ax.set_title(f"혼동행렬 ({exp_name}, {args.split})  정확도 {acc:.1%}  balanced acc {bal_acc:.1%}")
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    fig, ax = plt.subplots(figsize=(5.5, 5))
+    ConfusionMatrixDisplay(cm, display_labels=[GROUP_KO[g] for g in GROUPS]).plot(ax=ax, colorbar=False,
+                                                                                 cmap="Blues")
+    ax.set_title(f"혼동행렬 ({exp_name}, {args.split})\n정확도 {acc:.1%}  balanced acc {bal_acc:.1%}")
     ax.set_xlabel("모델이 예측한 종류"); ax.set_ylabel("실제 종류")
     fig.tight_layout()
-    fig.savefig(out_dir / "confusion_matrix.png", dpi=120)
-    print(f"\n저장: {out_dir / f'{args.split}_result.txt'}, {out_dir / 'confusion_matrix.png'}")
-    print("실험 여러 개를 표로 묶으려면: python src/compare.py")
+    fig.savefig(exp_dir / "confusion_matrix.png", dpi=120)
+    plt.close(fig)
+    print(f"\n저장: {exp_dir / f'{args.split}_result.txt'}, {exp_dir / 'confusion_matrix.png'}")
 
 
 if __name__ == "__main__":

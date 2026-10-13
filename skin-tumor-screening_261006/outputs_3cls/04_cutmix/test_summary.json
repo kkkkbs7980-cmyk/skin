@@ -1,0 +1,36 @@
+{
+  "experiment": "04_cutmix",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "cutmix"
+  ],
+  "aug_desc": "CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 16,
+  "recall": {
+    "normal": 0.8152709359605911,
+    "benign": 0.7238805970149254,
+    "malignant": 0.787012987012987
+  },
+  "precision": {
+    "normal": 0.9220055710306406,
+    "benign": 0.6953405017921147,
+    "malignant": 0.7197149643705463
+  },
+  "f1": {
+    "normal": 0.865359477124183,
+    "benign": 0.7093235831809872,
+    "malignant": 0.7518610421836228
+  },
+  "auc": {
+    "normal": 0.9549898535746346,
+    "benign": 0.9007679679981885,
+    "malignant": 0.8877182165015993
+  },
+  "accuracy": 0.7818696883852692,
+  "balanced_accuracy": 0.7753881733295013,
+  "malignant_alarm_recall": 0.7662337662337663,
+  "nonmalignant_false_alarm": 0.15875370919881307
+}

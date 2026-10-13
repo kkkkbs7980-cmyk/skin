@@ -1,0 +1,36 @@
+{
+  "experiment": "08_erase",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "erase"
+  ],
+  "aug_desc": "가림: 2~15% 영역을 지움(확률 50%)",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 15,
+  "recall": {
+    "normal": 0.8423645320197044,
+    "benign": 0.6604477611940298,
+    "malignant": 0.7454545454545455
+  },
+  "precision": {
+    "normal": 0.8221153846153846,
+    "benign": 0.7051792828685259,
+    "malignant": 0.7321428571428571
+  },
+  "f1": {
+    "normal": 0.8321167883211679,
+    "benign": 0.6820809248554913,
+    "malignant": 0.7387387387387387
+  },
+  "auc": {
+    "normal": 0.946563417044486,
+    "benign": 0.9075702398248958,
+    "malignant": 0.8843500712936915
+  },
+  "accuracy": 0.76109537299339,
+  "balanced_accuracy": 0.7494222795560933,
+  "malignant_alarm_recall": 0.7454545454545455,
+  "nonmalignant_false_alarm": 0.15281899109792285
+}

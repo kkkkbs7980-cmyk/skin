@@ -1,0 +1,36 @@
+{
+  "experiment": "02_crop",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "crop"
+  ],
+  "aug_desc": "자르기: 원본의 70~100% 영역을 잘라 224로",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 16,
+  "recall": {
+    "normal": 0.8399014778325123,
+    "benign": 0.7313432835820896,
+    "malignant": 0.7064935064935065
+  },
+  "precision": {
+    "normal": 0.8256658595641646,
+    "benign": 0.6950354609929078,
+    "malignant": 0.7472527472527473
+  },
+  "f1": {
+    "normal": 0.8327228327228328,
+    "benign": 0.7127272727272728,
+    "malignant": 0.7263017356475301
+  },
+  "auc": {
+    "normal": 0.9437118566072467,
+    "benign": 0.8927297771571976,
+    "malignant": 0.8825426798720568
+  },
+  "accuracy": 0.7639282341831917,
+  "balanced_accuracy": 0.7592460893027028,
+  "malignant_alarm_recall": 0.7012987012987013,
+  "nonmalignant_false_alarm": 0.13056379821958458
+}

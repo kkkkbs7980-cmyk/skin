@@ -1,0 +1,16 @@
+설정: 렌즈 테두리: 가장자리를 둥글게 어둡게(확률 50%)
+
+data: data
+out: outputs_3cls/07_vignette
+aug: ['vignette']
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 16 (검증 balanced acc 74.8%)
+총 학습 시간: 6.7분

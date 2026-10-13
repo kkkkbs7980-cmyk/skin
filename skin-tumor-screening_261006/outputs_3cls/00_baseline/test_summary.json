@@ -1,0 +1,34 @@
+{
+  "experiment": "00_baseline",
+  "split": "test",
+  "n": 1059,
+  "aug": [],
+  "aug_desc": "원본: 증강 없음 (크기만 224로 맞춤)",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 16,
+  "recall": {
+    "normal": 0.8571428571428571,
+    "benign": 0.6716417910447762,
+    "malignant": 0.7272727272727273
+  },
+  "precision": {
+    "normal": 0.8325358851674641,
+    "benign": 0.7003891050583657,
+    "malignant": 0.7291666666666666
+  },
+  "f1": {
+    "normal": 0.8446601941747572,
+    "benign": 0.6857142857142857,
+    "malignant": 0.7282184655396619
+  },
+  "auc": {
+    "normal": 0.945993859338106,
+    "benign": 0.8857246636602072,
+    "malignant": 0.8740394620216578
+  },
+  "accuracy": 0.7629839471199245,
+  "balanced_accuracy": 0.7520191251534536,
+  "malignant_alarm_recall": 0.7246753246753247,
+  "nonmalignant_false_alarm": 0.1513353115727003
+}

@@ -1,0 +1,16 @@
+설정: 자르기: 원본의 70~100% 영역을 잘라 224로
+
+data: data
+out: outputs_3cls/02_crop
+aug: ['crop']
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 16 (검증 balanced acc 75.0%)
+총 학습 시간: 6.7분

@@ -1,0 +1,36 @@
+{
+  "experiment": "01_flip",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "flip"
+  ],
+  "aug_desc": "방향: 좌우·상하 뒤집기 각 50%, 회전 0~360°",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 13,
+  "recall": {
+    "normal": 0.8620689655172413,
+    "benign": 0.7276119402985075,
+    "malignant": 0.7376623376623377
+  },
+  "precision": {
+    "normal": 0.8373205741626795,
+    "benign": 0.724907063197026,
+    "malignant": 0.7634408602150538
+  },
+  "f1": {
+    "normal": 0.8495145631067961,
+    "benign": 0.7262569832402235,
+    "malignant": 0.750330250990753
+  },
+  "auc": {
+    "normal": 0.9519232945330003,
+    "benign": 0.923457931581033,
+    "malignant": 0.9008632317237657
+  },
+  "accuracy": 0.7828139754485364,
+  "balanced_accuracy": 0.7757810811593622,
+  "malignant_alarm_recall": 0.7376623376623377,
+  "nonmalignant_false_alarm": 0.13056379821958458
+}

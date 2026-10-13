@@ -1,0 +1,36 @@
+{
+  "experiment": "07_vignette",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "vignette"
+  ],
+  "aug_desc": "렌즈 테두리: 가장자리를 둥글게 어둡게(확률 50%)",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 16,
+  "recall": {
+    "normal": 0.812807881773399,
+    "benign": 0.6940298507462687,
+    "malignant": 0.7376623376623377
+  },
+  "precision": {
+    "normal": 0.88,
+    "benign": 0.6595744680851063,
+    "malignant": 0.7064676616915423
+  },
+  "f1": {
+    "normal": 0.8450704225352113,
+    "benign": 0.6763636363636364,
+    "malignant": 0.7217280813214739
+  },
+  "auc": {
+    "normal": 0.951606454484418,
+    "benign": 0.8848213106402248,
+    "malignant": 0.8726501984662223
+  },
+  "accuracy": 0.7554296506137866,
+  "balanced_accuracy": 0.7481666900606685,
+  "malignant_alarm_recall": 0.7324675324675325,
+  "nonmalignant_false_alarm": 0.17062314540059348
+}

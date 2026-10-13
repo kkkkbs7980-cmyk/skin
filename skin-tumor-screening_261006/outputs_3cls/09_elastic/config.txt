@@ -1,0 +1,16 @@
+설정: 탄성 변형: alpha 30
+
+data: data
+out: outputs_3cls/09_elastic
+aug: ['elastic']
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 16 (검증 balanced acc 75.5%)
+총 학습 시간: 13.4분

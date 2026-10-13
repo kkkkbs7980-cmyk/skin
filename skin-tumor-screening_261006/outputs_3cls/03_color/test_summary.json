@@ -1,0 +1,36 @@
+{
+  "experiment": "03_color",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "color"
+  ],
+  "aug_desc": "색 변화: 밝기·대비·채도 ±20%, 색조 ±2%",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 12,
+  "recall": {
+    "normal": 0.8300492610837439,
+    "benign": 0.5559701492537313,
+    "malignant": 0.7194805194805195
+  },
+  "precision": {
+    "normal": 0.8259803921568627,
+    "benign": 0.6622222222222223,
+    "malignant": 0.6502347417840375
+  },
+  "f1": {
+    "normal": 0.828009828009828,
+    "benign": 0.6044624746450304,
+    "malignant": 0.6831072749691739
+  },
+  "auc": {
+    "normal": 0.9350553338513417,
+    "benign": 0.8578881823499445,
+    "malignant": 0.8490712551543411
+  },
+  "accuracy": 0.720491029272899,
+  "balanced_accuracy": 0.7018333099393316,
+  "malignant_alarm_recall": 0.7142857142857143,
+  "nonmalignant_false_alarm": 0.21513353115727002
+}

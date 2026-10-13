@@ -1,0 +1,16 @@
+설정: 방향: 좌우·상하 뒤집기 각 50%, 회전 0~360° / 자르기: 원본의 70~100% 영역을 잘라 224로 / CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0
+
+data: data
+out: outputs_3cls/05_combo
+aug: ['flip', 'crop', 'cutmix']
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 19 (검증 balanced acc 77.1%)
+총 학습 시간: 6.7분

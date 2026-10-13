@@ -1,0 +1,38 @@
+{
+  "experiment": "05_combo",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "flip",
+    "crop",
+    "cutmix"
+  ],
+  "aug_desc": "방향: 좌우·상하 뒤집기 각 50%, 회전 0~360° / 자르기: 원본의 70~100% 영역을 잘라 224로 / CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 19,
+  "recall": {
+    "normal": 0.8620689655172413,
+    "benign": 0.7276119402985075,
+    "malignant": 0.7766233766233767
+  },
+  "precision": {
+    "normal": 0.8293838862559242,
+    "benign": 0.7862903225806451,
+    "malignant": 0.7686375321336761
+  },
+  "f1": {
+    "normal": 0.8454106280193237,
+    "benign": 0.7558139534883721,
+    "malignant": 0.772609819121447
+  },
+  "auc": {
+    "normal": 0.9500373418628685,
+    "benign": 0.9195992225975055,
+    "malignant": 0.8980924120389996
+  },
+  "accuracy": 0.7969782813975449,
+  "balanced_accuracy": 0.7887680941463752,
+  "malignant_alarm_recall": 0.7558441558441559,
+  "nonmalignant_false_alarm": 0.12166172106824925
+}

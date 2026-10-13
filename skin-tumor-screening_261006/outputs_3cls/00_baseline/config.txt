@@ -1,0 +1,16 @@
+설정: 원본: 증강 없음 (크기만 224로 맞춤)
+
+data: data
+out: outputs_3cls/00_baseline
+aug: []
+balance: none
+arch: resnet50
+epochs: 20
+img_size: 224
+batch_size: 32
+lr: 0.0001
+workers: 4
+no_pretrained: False
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 16 (검증 balanced acc 75.2%)
+총 학습 시간: 6.8분

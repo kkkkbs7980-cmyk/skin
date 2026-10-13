@@ -1,0 +1,36 @@
+{
+  "experiment": "09_elastic",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "elastic"
+  ],
+  "aug_desc": "탄성 변형: alpha 30",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 16,
+  "recall": {
+    "normal": 0.8719211822660099,
+    "benign": 0.7723880597014925,
+    "malignant": 0.6155844155844156
+  },
+  "precision": {
+    "normal": 0.8232558139534883,
+    "benign": 0.6330275229357798,
+    "malignant": 0.7847682119205298
+  },
+  "f1": {
+    "normal": 0.84688995215311,
+    "benign": 0.6957983193277311,
+    "malignant": 0.6899563318777293
+  },
+  "auc": {
+    "normal": 0.940211528451482,
+    "benign": 0.8932581089495631,
+    "malignant": 0.8685036032217041
+  },
+  "accuracy": 0.7535410764872521,
+  "balanced_accuracy": 0.7532978858506393,
+  "malignant_alarm_recall": 0.6103896103896104,
+  "nonmalignant_false_alarm": 0.09347181008902077
+}

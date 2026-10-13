@@ -1,0 +1,36 @@
+{
+  "experiment": "06_hair",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "hair"
+  ],
+  "aug_desc": "가짜 털: 어두운 곡선 0~8개를 무작위로 그림(확률 50%)",
+  "balance": "none",
+  "epochs": 20,
+  "best_epoch": 10,
+  "recall": {
+    "normal": 0.8399014778325123,
+    "benign": 0.6417910447761194,
+    "malignant": 0.7792207792207793
+  },
+  "precision": {
+    "normal": 0.8503740648379052,
+    "benign": 0.7543859649122807,
+    "malignant": 0.6976744186046512
+  },
+  "f1": {
+    "normal": 0.8451053283767038,
+    "benign": 0.6935483870967742,
+    "malignant": 0.7361963190184049
+  },
+  "auc": {
+    "normal": 0.9452960568501573,
+    "benign": 0.8893993999660357,
+    "malignant": 0.8762688350225443
+  },
+  "accuracy": 0.7677053824362606,
+  "balanced_accuracy": 0.7536377672764702,
+  "malignant_alarm_recall": 0.7792207792207793,
+  "nonmalignant_false_alarm": 0.18545994065281898
+}

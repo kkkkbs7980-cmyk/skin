@@ -1,0 +1,52 @@
+{
+  "experiment": "05_combo",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "flip",
+    "rotate",
+    "crop",
+    "cutmix"
+  ],
+  "aug_desc": "뒤집기: 좌우·상하 각 50% / 회전: 0–360° 무작위 / 자르기: 원본의 70–100% 영역을 잘라 224로 / CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0",
+  "balance": "none",
+  "arch": "convnext_tiny",
+  "train_desc": "AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16",
+  "epochs": 50,
+  "best_epoch": 27,
+  "recall": {
+    "normal": 0.8448275862068966,
+    "benign": 0.7835820895522388,
+    "malignant": 0.7714285714285715
+  },
+  "precision": {
+    "normal": 0.8618090452261307,
+    "benign": 0.7664233576642335,
+    "malignant": 0.7674418604651163
+  },
+  "f1": {
+    "normal": 0.8532338308457711,
+    "benign": 0.7749077490774908,
+    "malignant": 0.7694300518134715
+  },
+  "auc": {
+    "normal": 0.9510067215353163,
+    "benign": 0.9383455667301923,
+    "malignant": 0.9079463563143089
+  },
+  "class_accuracy": {
+    "normal": 0.8885741265344664,
+    "benign": 0.8847969782813976,
+    "malignant": 0.8319169027384324
+  },
+  "macro": {
+    "recall": 0.7999460823959023,
+    "precision": 0.7985580877851602,
+    "f1": 0.7991905439122444,
+    "auc": 0.9324328815266059
+  },
+  "accuracy": 0.8026440037771483,
+  "balanced_accuracy": 0.7999460823959023,
+  "malignant_alarm_recall": 0.7714285714285715,
+  "nonmalignant_false_alarm": 0.13056379821958458
+}

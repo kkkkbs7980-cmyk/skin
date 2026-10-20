@@ -2,12 +2,47 @@
 
 이번 HAM10000 실험의 코드와 결과 공유용 폴더입니다. 저장소 루트의 기존 AIHUB/PAD-UFES-20 실험과 구분하여 보관합니다.
 
-- `src/`: 최신 3분류 실험 코드. `src/ham7_old/`는 2026-10-06의 7종 분류 코드, `src/aihub_old/`는 AIHUB 코드 보관용입니다.
+- `src/`: 최신 3차 실험 코드. `src/v2_resnet50_1013/`는 2차 3분류 코드, `src/ham7_old/`는 7종 분류 코드, `src/aihub_old/`는 AIHUB 코드 보관용입니다.
+- `outputs_3cls_v3/`: 2026-10-20의 ConvNeXt-Tiny 및 ResNet50 실험 결과와 모델 가중치.
 - `outputs_3cls/`: 2026-10-13의 3분류 실험 10개 결과와 모델 가중치.
 - `outputs/`: A/B/C 모델 가중치(`best.pt`), 학습 이력, 시험 평가 결과, 혼동행렬, 비교표와 그래프.
 - 원본 데이터는 포함하지 않습니다. HAM10000을 이 폴더의 `data/` 아래에 압축 해제하면 됩니다.
 
-## 최신 3분류 실험 (2026-10-13)
+## 최신 3차 실험 (2026-10-20)
+
+모델별 기본 학습과 증강 효과를 비교했습니다. ConvNeXt-Tiny 6개 조건(기본, 뒤집기, 회전, 자르기, CutMix, 조합)과 ResNet50 2개 조건(기본, 조합), 총 8개 본 실험입니다. 본 실험 모두 50 epoch 학습과 동일한 시험 이미지 1,059장 평가를 완료했습니다. `_smoke/`는 1 epoch 연습 실행 결과이며 본 실험 결과표에서 제외합니다.
+
+공통 설정은 ImageNet 사전학습, 입력 224px, 배치 16, AdamW 초기 학습률 1e-4, weight decay 0.05, cosine scheduler, AMP bf16입니다. 각 모델은 검증 balanced accuracy가 가장 높은 epoch를 선택했습니다.
+
+[3차 전체 결과표 및 모델 비교](outputs_3cls_v3/결과표.md)에 실험별 recall, precision, F1, AUC, accuracy를 정리했습니다. 전체 행의 recall은 balanced accuracy이고, 클래스별 accuracy는 one-vs-rest 이진 정확도입니다. 괄호는 ConvNeXt-Tiny 기본 실험(`00_baseline`) 대비 차이(%p)입니다. 실험별 폴더에 모델, 설정, 학습 이력, 평가 결과 및 혼동행렬을 포함합니다.
+
+### 3차 모델 다운로드 및 실행
+
+`outputs_3cls_v3/`의 `.pt` 파일은 Git LFS로 저장합니다. Git으로 저장소를 받은 뒤 모델 원본이 필요하면 Git LFS가 설치된 환경에서 다음을 실행합니다.
+
+```bat
+git lfs install
+git lfs pull
+```
+
+GPU용 PyTorch와 torchvision이 설치된 환경을 활성화하고, 이 프로젝트 폴더에서 실행합니다. 원본 HAM10000 데이터는 별도로 `data/` 아래에 준비합니다.
+
+```bat
+python -m pip install -r requirements.txt
+run_all.bat
+```
+
+자세한 순서는 [팀원 실행 안내](팀원_실행안내.md)를 참고합니다. `run_all.bat`은 데이터 준비, 연습 실행, 본 실험 8개를 수행하고 `outputs_3cls_v3/결과표.md`를 갱신합니다. 재실행은 같은 이름의 3차 모델과 결과를 새로 생성합니다.
+
+저장된 모델만 재평가하려면 다음을 실행합니다.
+
+```bat
+python src/prepare_split.py --data data
+python src/evaluate.py --data data --ckpt outputs_3cls_v3/00_baseline/best.pt
+python src/compare.py --out outputs_3cls_v3
+```
+
+## 이전 2차 3분류 실험 (2026-10-13)
 
 HAM10000 사진 5,310장을 모반(nv), 기타 양성(bkl/df/vasc), 악성·전암(mel/bcc/akiec)으로 묶어 학습했습니다. 코드와 결과표에서는 이 그룹을 각각 `normal`(정상/점), `benign`(양성), `malignant`(악성)으로 표시합니다. `normal`은 병변 없는 일반 피부 사진을 뜻하지 않습니다.
 
@@ -17,24 +52,18 @@ HAM10000 사진 5,310장을 모반(nv), 기타 양성(bkl/df/vasc), 악성·전�
 
 실험 조건은 기본 학습, 뒤집기·회전, 자르기, 색 변화, CutMix, 뒤집기·자르기·CutMix 조합, 가짜 털, 렌즈 테두리, 가림, 탄성 변형입니다. 데이터 규모와 분류 기준이 달라 7종 실험과 정확도를 직접 비교하지 않습니다.
 
-### 3분류 실행
+### 2차 결과 재평가
 
 이 폴더에서 GPU용 PyTorch와 torchvision이 설치된 환경을 활성화하고 실행합니다. 원본 HAM10000 데이터는 별도로 `data/` 아래에 준비합니다.
 
 ```bat
 python -m pip install -r requirements.txt
-run_all.bat
+python src/v2_resnet50_1013/prepare_split.py --data data
+python src/v2_resnet50_1013/evaluate.py --data data --ckpt outputs_3cls/00_baseline/best.pt
+python src/v2_resnet50_1013/compare.py --out outputs_3cls
 ```
 
-실행 순서와 결과 파일 위치는 [팀원 실행 안내](팀원_실행안내.md)를 참고합니다. `run_all.bat`은 축소 캐시와 `split_3cls.csv`를 만든 뒤 각 실험의 학습, 평가, 결과표 갱신을 수행합니다. 재실행은 기존 3분류 실험의 모델과 결과를 새로 생성합니다.
-
-저장된 모델을 평가하려면 동일 데이터로 분할을 준비한 뒤 실행합니다.
-
-```bat
-python src/prepare_split.py --data data
-python src/evaluate.py --data data --ckpt outputs_3cls/00_baseline/best.pt
-python src/compare.py --out outputs_3cls
-```
+2차 코드 전체 재실행 방법은 [2차 코드 보관 안내](src/v2_resnet50_1013/README.md)를 참고합니다. 프로젝트 루트의 `run_all.bat`은 현재 3차 실험용입니다.
 
 ## 이전 7종 시험 결과 (2026-10-06)
 

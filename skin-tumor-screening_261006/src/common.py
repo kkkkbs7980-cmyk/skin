@@ -84,16 +84,17 @@ def load_split(data_root):
 # ---------------------------------------------------------------------------
 # 증강 기법. 이름 하나 = 기법 하나. train.py --aug flip crop ... 로 골라 쓴다.
 # ---------------------------------------------------------------------------
-AUG_NAMES = ["flip", "crop", "color", "cutmix", "hair", "vignette", "erase", "elastic"]
+AUG_NAMES = ["flip", "rotate", "crop", "color", "cutmix", "hair", "vignette", "erase", "elastic"]
 
 AUG_DESC = {
-    "flip": "방향: 좌우·상하 뒤집기 각 50%, 회전 0~360°",
-    "crop": "자르기: 원본의 70~100% 영역을 잘라 224로",
+    "flip": "뒤집기: 좌우·상하 각 50%",
+    "rotate": "회전: 0–360° 무작위",
+    "crop": "자르기: 원본의 70–100% 영역을 잘라 224로",
     "color": "색 변화: 밝기·대비·채도 ±20%, 색조 ±2%",
     "cutmix": "CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0",
-    "hair": "가짜 털: 어두운 곡선 0~8개를 무작위로 그림(확률 50%)",
+    "hair": "가짜 털: 어두운 곡선 0–8개를 무작위로 그림(확률 50%)",
     "vignette": "렌즈 테두리: 가장자리를 둥글게 어둡게(확률 50%)",
-    "erase": "가림: 2~15% 영역을 지움(확률 50%)",
+    "erase": "가림: 2–15% 영역을 지움(확률 50%)",
     "elastic": "탄성 변형: alpha 30",
 }
 ELASTIC_FALLBACK_DESC = "탄성 변형 대신 기울이기(shear 10°) — torchvision 구버전이라 ElasticTransform 없음"
@@ -101,7 +102,7 @@ NO_AUG_DESC = "원본: 증강 없음 (크기만 224로 맞춤)"
 
 
 class RandomHair:
-    """사진 위에 어두운(검정~갈색) 곡선을 0~8개 그린다. 피부경 사진의 털을 흉내 냄."""
+    """사진 위에 어두운(검정–갈색) 곡선을 0–8개 그린다. 피부경 사진의 털을 흉내 냄."""
 
     def __init__(self, p=0.5, max_lines=8):
         self.p = p
@@ -131,7 +132,7 @@ class RandomHair:
 
 
 class RandomVignette:
-    """사진 중심에서 반지름 r(짧은 변의 0.45~0.6배) 밖을 부드럽게 검게. 피부경 렌즈 테두리 흉내."""
+    """사진 중심에서 반지름 r(짧은 변의 0.45–0.6배) 밖을 부드럽게 검게. 피부경 렌즈 테두리 흉내."""
 
     def __init__(self, p=0.5, r_range=(0.45, 0.6), soft=0.08):
         self.p = p
@@ -182,8 +183,9 @@ def get_transforms(img_size, aug=()):
     else:
         tf.append(transforms.Resize((img_size, img_size)))
     if "flip" in aug:
-        tf += [transforms.RandomHorizontalFlip(0.5), transforms.RandomVerticalFlip(0.5),
-               transforms.RandomRotation(360)]
+        tf += [transforms.RandomHorizontalFlip(0.5), transforms.RandomVerticalFlip(0.5)]
+    if "rotate" in aug:
+        tf.append(transforms.RandomRotation(360))
     if "elastic" in aug:
         tf.append(make_elastic()[0])
     if "color" in aug:
@@ -232,6 +234,10 @@ def build_model(num_classes, arch="resnet50", pretrained=True):
         weights = models.ResNet18_Weights.DEFAULT if pretrained else None
         model = models.resnet18(weights=weights)
         model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    elif arch == "convnext_tiny":
+        weights = models.ConvNeXt_Tiny_Weights.DEFAULT if pretrained else None
+        model = models.convnext_tiny(weights=weights)
+        model.classifier[2] = torch.nn.Linear(model.classifier[2].in_features, num_classes)  # 768 → 3
     elif arch == "efficientnet_b0":
         weights = models.EfficientNet_B0_Weights.DEFAULT if pretrained else None
         model = models.efficientnet_b0(weights=weights)
@@ -276,21 +282,54 @@ def _pct(v, base, show_delta):
     return s
 
 
+ARCH_KO = {"convnext_tiny": "ConvNeXt-Tiny", "resnet50": "ResNet50", "resnet18": "ResNet18",
+           "efficientnet_b0": "EfficientNet-B0"}
+
+# 결과표 밑에 붙이는 각주 (evaluate.py, compare.py 공통)
+TABLE_NOTES = [
+    "- 클래스별 accuracy 는 '그 클래스인가 아닌가'의 2진 정확도((TP+TN)/전체)라 "
+    "쉬운 음성 사진까지 맞힌 걸로 세어 전체 accuracy 보다 높음.",
+    "- 전체 행: recall·precision·F1·AUC 는 3클래스 단순 평균(macro), accuracy 는 전체 정확도. "
+    "전체 recall(= 클래스별 recall 평균)이 곧 balanced accuracy.",
+]
+
+
+def setting_line(summary):
+    """결과표 위 "설정:" 줄. 모델 / 적용 기법 / epoch·best epoch / 옵티마이저·배치·AMP."""
+    arch = summary.get("arch")
+    parts = []
+    if arch:
+        parts.append(f"모델 {ARCH_KO.get(arch, arch)}")
+    parts.append(summary["aug_desc"])
+    parts.append(f"{summary['epochs']} epoch (best epoch {summary['best_epoch']})")
+    if summary.get("train_desc"):
+        parts.append(summary["train_desc"])
+    return "설정: " + "  |  ".join(parts)
+
+
 def result_table(summary, base=None):
-    """test_summary.json 하나 → 설정 한 줄 + 표(행=클래스, 열=지표). base 가 있으면 괄호에 원본 대비 %p."""
+    """test_summary.json 하나 → 설정 한 줄 + 표(행=클래스, 열=지표). base 가 있으면 괄호에 원본 대비 %p.
+    예전(2차) summary 처럼 class_accuracy / macro 값이 없으면 그 칸은 "–"."""
     show = base is not None and base.get("experiment") != summary.get("experiment")
     lines = [
-        f"설정: {summary['aug_desc']}   ({summary['epochs']} epoch, best epoch {summary['best_epoch']})",
+        setting_line(summary),
         "",
         "| | recall | precision | F1 | AUC | accuracy |",
         "|---|---|---|---|---|---|",
     ]
+    keys = ("recall", "precision", "f1", "auc", "class_accuracy")
     for g in GROUPS:
         cells = []
-        for key in ("recall", "precision", "f1", "auc"):
-            b = base[key][g] if show else None
-            cells.append(_pct(summary[key][g], b, show))
-        lines.append(f"| {GROUP_KO[g]} | " + " | ".join(cells) + " | – |")
-    acc = _pct(summary["accuracy"], base["accuracy"] if show else None, show)
-    lines.append(f"| 전체 | – | – | – | – | {acc} |")
+        for key in keys:
+            v = summary.get(key, {}).get(g)
+            b = base.get(key, {}).get(g) if show else None
+            cells.append(_pct(v, b, show))
+        lines.append(f"| {GROUP_KO[g]} | " + " | ".join(cells) + " |")
+    cells = []
+    for key in ("recall", "precision", "f1", "auc"):
+        v = summary.get("macro", {}).get(key)
+        b = base.get("macro", {}).get(key) if show else None
+        cells.append(_pct(v, b, show))
+    cells.append(_pct(summary["accuracy"], base["accuracy"] if show else None, show))
+    lines.append("| 전체 | " + " | ".join(cells) + " |")
     return "\n".join(lines)

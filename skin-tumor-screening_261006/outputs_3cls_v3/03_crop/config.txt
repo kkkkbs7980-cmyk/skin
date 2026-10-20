@@ -1,0 +1,20 @@
+설정: 자르기: 원본의 70–100% 영역을 잘라 224로
+학습: 모델 ConvNeXt-Tiny, AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16
+
+data: data
+out: outputs_3cls_v3/03_crop
+aug: ['crop']
+balance: none
+arch: convnext_tiny
+epochs: 50
+img_size: 224
+batch_size: 16
+lr: 0.0001
+weight_decay: 0.05
+no_amp: False
+workers: 4
+no_pretrained: False
+AMP 실제 사용: True
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 35 (검증 balanced acc 78.2%)
+총 학습 시간: 10.8분

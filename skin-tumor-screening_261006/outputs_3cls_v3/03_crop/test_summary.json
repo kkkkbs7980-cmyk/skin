@@ -1,0 +1,49 @@
+{
+  "experiment": "03_crop",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "crop"
+  ],
+  "aug_desc": "자르기: 원본의 70–100% 영역을 잘라 224로",
+  "balance": "none",
+  "arch": "convnext_tiny",
+  "train_desc": "AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16",
+  "epochs": 50,
+  "best_epoch": 35,
+  "recall": {
+    "normal": 0.8793103448275862,
+    "benign": 0.7611940298507462,
+    "malignant": 0.6987012987012987
+  },
+  "precision": {
+    "normal": 0.8459715639810427,
+    "benign": 0.7058823529411765,
+    "malignant": 0.7729885057471264
+  },
+  "f1": {
+    "normal": 0.8623188405797102,
+    "benign": 0.7324955116696589,
+    "malignant": 0.7339699863574352
+  },
+  "auc": {
+    "normal": 0.960117758884723,
+    "benign": 0.91690567390607,
+    "malignant": 0.8990230837411848
+  },
+  "class_accuracy": {
+    "normal": 0.8923512747875354,
+    "benign": 0.8593012275731823,
+    "malignant": 0.8158640226628895
+  },
+  "macro": {
+    "recall": 0.779735224459877,
+    "precision": 0.7749474742231152,
+    "f1": 0.7762614462022682,
+    "auc": 0.9253488388439925
+  },
+  "accuracy": 0.7837582625118036,
+  "balanced_accuracy": 0.779735224459877,
+  "malignant_alarm_recall": 0.6987012987012987,
+  "nonmalignant_false_alarm": 0.1172106824925816
+}

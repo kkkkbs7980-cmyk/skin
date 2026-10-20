@@ -1,0 +1,20 @@
+설정: CutMix: 배치 안 두 사진을 사각형으로 잘라 붙임, alpha=1.0
+학습: 모델 ConvNeXt-Tiny, AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16
+
+data: data
+out: outputs_3cls_v3/04_cutmix
+aug: ['cutmix']
+balance: none
+arch: convnext_tiny
+epochs: 50
+img_size: 224
+batch_size: 16
+lr: 0.0001
+weight_decay: 0.05
+no_amp: False
+workers: 4
+no_pretrained: False
+AMP 실제 사용: True
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 16 (검증 balanced acc 79.4%)
+총 학습 시간: 10.8분

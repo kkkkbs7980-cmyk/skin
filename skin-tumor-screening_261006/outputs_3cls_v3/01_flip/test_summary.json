@@ -1,0 +1,49 @@
+{
+  "experiment": "01_flip",
+  "split": "test",
+  "n": 1059,
+  "aug": [
+    "flip"
+  ],
+  "aug_desc": "뒤집기: 좌우·상하 각 50%",
+  "balance": "none",
+  "arch": "convnext_tiny",
+  "train_desc": "AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16",
+  "epochs": 50,
+  "best_epoch": 42,
+  "recall": {
+    "normal": 0.8768472906403941,
+    "benign": 0.7014925373134329,
+    "malignant": 0.8077922077922078
+  },
+  "precision": {
+    "normal": 0.8376470588235294,
+    "benign": 0.8430493273542601,
+    "malignant": 0.7566909975669099
+  },
+  "f1": {
+    "normal": 0.8567990373044525,
+    "benign": 0.7657841140529531,
+    "malignant": 0.7814070351758794
+  },
+  "auc": {
+    "normal": 0.9559479175310617,
+    "benign": 0.9392041058927864,
+    "malignant": 0.9155555127365217
+  },
+  "class_accuracy": {
+    "normal": 0.8876298394711992,
+    "benign": 0.8914069877242682,
+    "malignant": 0.8356940509915014
+  },
+  "macro": {
+    "recall": 0.7953773452486783,
+    "precision": 0.8124624612482331,
+    "f1": 0.8013300621777617,
+    "auc": 0.9369025120534565
+  },
+  "accuracy": 0.8073654390934845,
+  "balanced_accuracy": 0.7953773452486783,
+  "malignant_alarm_recall": 0.8077922077922078,
+  "nonmalignant_false_alarm": 0.14688427299703263
+}

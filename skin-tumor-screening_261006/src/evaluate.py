@@ -1,13 +1,14 @@
 """학습된 3분류 모델을 test 로 평가.
 
-실행: python src/evaluate.py --data data --ckpt outputs_3cls/00_baseline/best.pt
+실행: python src/evaluate.py --data data --ckpt outputs_3cls_v3/00_baseline/best.pt
 
 만들어지는 것 (ckpt 와 같은 폴더):
     test_result.txt        결과표(행=클래스, 열=지표) + 참고 지표 + 악성 위험도 판정
-    test_summary.json      클래스별 recall/precision/F1/AUC, accuracy (compare.py 가 결과표.md 만들 때 씀)
+    test_summary.json      클래스별 recall/precision/F1/AUC/accuracy(one-vs-rest), macro 평균, 전체 accuracy
+                           (compare.py 가 결과표.md 만들 때 씀)
     confusion_matrix.png   혼동행렬 그림 (보고서용)
 
-표 괄호 안 숫자 = 원본(outputs_3cls/00_baseline) 대비 증가폭(%p). 원본 결과가 아직 없으면 괄호 없음.
+표 괄호 안 숫자 = 같은 폴더의 원본(예: outputs_3cls_v3/00_baseline) 대비 증가폭(%p). 원본 결과가 아직 없으면 괄호 없음.
 """
 import argparse
 import json
@@ -20,7 +21,8 @@ from sklearn.metrics import (ConfusionMatrixDisplay, balanced_accuracy_score, co
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from common import GROUP_KO, GROUPS, HamDataset, build_model, get_device, result_table, setup_korean_font
+from common import (GROUP_KO, GROUPS, TABLE_NOTES, HamDataset, build_model, get_device, result_table,
+                    setup_korean_font)
 
 BASELINE_NAME = "00_baseline"
 
@@ -37,7 +39,7 @@ def predict(model, loader, device):
 
 
 def load_baseline(exp_dir, split):
-    """같은 outputs_3cls 폴더 안의 00_baseline 결과. 없으면 None."""
+    """같은 결과 폴더(outputs_3cls_v3 등) 안의 00_baseline 결과. 없으면 None."""
     f = Path(exp_dir).parent / BASELINE_NAME / f"{split}_summary.json"
     if f.exists():
         return json.loads(f.read_text(encoding="utf-8"))
@@ -47,7 +49,7 @@ def load_baseline(exp_dir, split):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data")
-    parser.add_argument("--ckpt", default="outputs_3cls/00_baseline/best.pt")
+    parser.add_argument("--ckpt", default="outputs_3cls_v3/00_baseline/best.pt")
     parser.add_argument("--split", default="test", choices=["val", "test"])
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--workers", type=int, default=4)
@@ -76,6 +78,10 @@ def main():
     for k in labels:  # 클래스별 one-vs-rest AUC (softmax 확률)
         pos = (y_true == k)
         auc.append(float(roc_auc_score(pos, probs[:, k])) if 0 < pos.sum() < len(pos) else float("nan"))
+    # 클래스별 accuracy = "그 클래스인가 아닌가" 2진 정확도 (TP+TN)/전체. AUC 열과 같은 one-vs-rest 방식
+    class_acc = [float(((y_true == k) == (y_pred == k)).mean()) for k in labels]
+    macro = {"recall": float(np.mean(rec)), "precision": float(np.mean(prec)), "f1": float(np.mean(f1)),
+             "auc": float(np.nanmean(auc))}
 
     # 2단계 출력(참고): 악성 확률 >= 임계값 → 전문의 상담 권고
     mal = GROUPS.index("malignant")
@@ -89,11 +95,14 @@ def main():
     summary = {
         "experiment": exp_name, "split": args.split, "n": int(len(ds)),
         "aug": ckpt.get("aug", []), "aug_desc": ckpt.get("aug_desc", ""), "balance": ckpt.get("balance", "none"),
+        "arch": ckpt.get("arch"), "train_desc": ckpt.get("train_desc", ""),
         "epochs": ckpt.get("epochs", "?"), "best_epoch": ckpt.get("epoch", "?"),
         "recall": {g: float(v) for g, v in zip(GROUPS, rec)},
         "precision": {g: float(v) for g, v in zip(GROUPS, prec)},
         "f1": {g: float(v) for g, v in zip(GROUPS, f1)},
         "auc": dict(zip(GROUPS, auc)),
+        "class_accuracy": dict(zip(GROUPS, class_acc)),
+        "macro": macro,
         "accuracy": acc, "balanced_accuracy": bal_acc,
         "malignant_alarm_recall": float(mal_recall), "nonmalignant_false_alarm": float(false_alarm),
     }
@@ -105,6 +114,8 @@ def main():
         + ", ".join(f"{GROUP_KO[g]} {c}" for g, c in zip(GROUPS, counts)) + ")",
         "",
         table,
+        "",
+        *TABLE_NOTES,
         "",
         f"(참고) balanced accuracy: {bal_acc:.2%}",
         f"(참고) 악성 확률 >= {args.malignant_threshold} → '전문의 상담 권고' 판정 시: "

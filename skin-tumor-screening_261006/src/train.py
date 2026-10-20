@@ -1,16 +1,18 @@
-"""HAM10000 3분류(정상/양성/악성) 학습: 미리 학습된 ResNet50 을 다시 학습 (전이학습).
+"""HAM10000 3분류(정상/양성/악성) 학습: 미리 학습된 모델(ConvNeXt-Tiny / ResNet50)을 다시 학습 (전이학습).
+
+3차(10/20) 기본 설정: 50 epoch, 배치 16, AdamW(lr 1e-4, weight decay 0.05) + cosine, AMP(bf16).
 
 실행 예:
-    원본:            python src/train.py --data data --out outputs_3cls/00_baseline
-    증강 하나:       python src/train.py --data data --out outputs_3cls/01_flip --aug flip
-    증강 여러 개:    python src/train.py --data data --out outputs_3cls/05_combo --aug flip crop cutmix
-    가능한 증강 이름: flip crop color cutmix hair vignette erase elastic   (전체 순서는 run_all.bat)
+    원본:            python src/train.py --data data --arch convnext_tiny --out outputs_3cls_v3/00_baseline
+    증강 하나:       python src/train.py --data data --arch convnext_tiny --out outputs_3cls_v3/01_flip --aug flip
+    증강 여러 개:    python src/train.py --data data --arch convnext_tiny --out outputs_3cls_v3/05_combo --aug flip rotate crop cutmix
+    가능한 증강 이름: flip rotate crop color cutmix hair vignette erase elastic   (전체 순서는 run_all.bat)
 
-끝나면 outputs_3cls/<이름>/ 에 다음이 생긴다.
+끝나면 outputs_3cls_v3/<이름>/ 에 다음이 생긴다.
     best.pt        검증 balanced accuracy 가 가장 좋았던 모델 (evaluate.py 에서 사용)
     history.csv    epoch별 손실·정확도·balanced accuracy, 마지막 줄에 총 학습 시간(분)
     history.png    학습 곡선 그림
-    config.txt     첫 줄: 사용한 증강 설정 (결과표 위에 그대로 실림), 그 아래 세부 설정과 총 학습 시간
+    config.txt     첫 줄: 사용한 증강 설정, 둘째 줄: 모델·옵티마이저·배치·AMP, 그 아래 세부 설정과 총 학습 시간
 """
 import argparse
 import csv
@@ -24,7 +26,8 @@ from torch import nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 
-from common import AUG_NAMES, GROUPS, HamDataset, aug_description, build_model, get_device, setup_korean_font
+from common import (ARCH_KO, AUG_NAMES, GROUPS, HamDataset, aug_description, build_model, get_device,
+                    setup_korean_font)
 
 
 def cutmix(x, y, alpha=1.0):
@@ -44,7 +47,7 @@ def cutmix(x, y, alpha=1.0):
     return x, y, y[idx], lam
 
 
-def run_one_epoch(model, loader, criterion, optimizer, device, train, use_cutmix=False):
+def run_one_epoch(model, loader, criterion, optimizer, device, train, use_cutmix=False, amp=False):
     model.train(train)
     total_loss, n = 0.0, 0
     preds, labels = [], []
@@ -53,11 +56,13 @@ def run_one_epoch(model, loader, criterion, optimizer, device, train, use_cutmix
             x, y = x.to(device), y.to(device)
             if train and use_cutmix:
                 x, ya, yb, lam = cutmix(x, y)
+            # AMP: forward·loss 를 bf16 으로 계산 (메모리 약 절반, 속도↑). bf16 은 GradScaler 필요 없음
+            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=amp):
                 out = model(x)
-                loss = lam * criterion(out, ya) + (1 - lam) * criterion(out, yb)
-            else:
-                out = model(x)
-                loss = criterion(out, y)
+                if train and use_cutmix:
+                    loss = lam * criterion(out, ya) + (1 - lam) * criterion(out, yb)
+                else:
+                    loss = criterion(out, y)
             if train:
                 optimizer.zero_grad()
                 loss.backward()
@@ -76,16 +81,19 @@ def run_one_epoch(model, loader, criterion, optimizer, device, train, use_cutmix
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data")
-    parser.add_argument("--out", default="outputs_3cls/00_baseline", help="결과 저장 폴더")
+    parser.add_argument("--out", default="outputs_3cls_v3/00_baseline", help="결과 저장 폴더")
     parser.add_argument("--aug", nargs="*", default=[], choices=AUG_NAMES,
-                        help="증강 기법 이름 여러 개. 예: --aug flip crop cutmix. 없으면 원본")
+                        help="증강 기법 이름 여러 개. 예: --aug flip rotate crop cutmix. 없으면 원본")
     parser.add_argument("--balance", default="none", choices=["none", "weight", "sampler"],
                         help="불균형 보정. weight: 드문 클래스의 loss 를 크게. sampler: 드문 클래스를 더 자주 뽑기")
-    parser.add_argument("--arch", default="resnet50", choices=["resnet50", "resnet18", "efficientnet_b0"])
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--arch", default="resnet50",
+                        choices=["convnext_tiny", "resnet50", "resnet18", "efficientnet_b0"])
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--img-size", type=int, default=224)
-    parser.add_argument("--batch-size", type=int, default=32, help="8GB GPU 에서 메모리 부족이면 16")
+    parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--weight-decay", type=float, default=0.05, help="AdamW weight decay")
+    parser.add_argument("--no-amp", action="store_true", help="AMP(bf16) 끄기. CPU 에서는 자동으로 꺼짐")
     parser.add_argument("--workers", type=int, default=4, help="데이터 읽기 프로세스 수. 문제 생기면 0")
     parser.add_argument("--no-pretrained", action="store_true", help="(테스트용) ImageNet 가중치 안 씀")
     args = parser.parse_args()
@@ -132,11 +140,20 @@ def main():
         criterion = nn.CrossEntropyLoss(weight=class_w.to(device))
     else:
         criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
+    # AMP(bf16) 은 bf16 을 지원하는 GPU 에서만 (RTX 4060 Ti 지원). CPU·구형 GPU 에서는 fp32
+    amp = (not args.no_amp and device.type == "cuda" and torch.cuda.is_bf16_supported())
+    if not args.no_amp and device.type == "cuda" and not amp:
+        print("참고: 이 GPU 는 bf16 을 지원하지 않아 AMP 를 끄고 fp32 로 학습합니다.")
+    train_desc = (f"AdamW lr {args.lr:g}, wd {args.weight_decay:g}, cosine, 배치 {args.batch_size}, "
+                  f"{'AMP bf16' if amp else 'fp32'}")
+    print(f"모델: {ARCH_KO.get(args.arch, args.arch)} / {train_desc}")
+
     detail = "\n".join(f"{k}: {v}" for k, v in vars(args).items())
-    config = f"설정: {aug_desc}\n\n{detail}\n클래스 가중치: {[round(float(w), 2) for w in class_w]}\n"
+    config = (f"설정: {aug_desc}\n학습: 모델 {ARCH_KO.get(args.arch, args.arch)}, {train_desc}\n\n"
+              f"{detail}\nAMP 실제 사용: {amp}\n클래스 가중치: {[round(float(w), 2) for w in class_w]}\n")
     (out_dir / "config.txt").write_text(config, encoding="utf-8")
 
     history = []
@@ -144,8 +161,9 @@ def main():
     start = time.time()
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
-        tr_loss, tr_acc, tr_bal = run_one_epoch(model, train_loader, criterion, optimizer, device, True, use_cutmix)
-        va_loss, va_acc, va_bal = run_one_epoch(model, val_loader, criterion, optimizer, device, False)
+        tr_loss, tr_acc, tr_bal = run_one_epoch(model, train_loader, criterion, optimizer, device, True,
+                                               use_cutmix, amp)
+        va_loss, va_acc, va_bal = run_one_epoch(model, val_loader, criterion, optimizer, device, False, amp=amp)
         scheduler.step()
         history.append([epoch, tr_loss, tr_acc, tr_bal, va_loss, va_acc, va_bal])
         print(f"[{epoch}/{args.epochs}] 학습 loss {tr_loss:.3f} acc {tr_acc:.1%} | "
@@ -157,6 +175,7 @@ def main():
             best, best_epoch = va_bal, epoch
             torch.save({"model": model.state_dict(), "classes": GROUPS, "arch": args.arch,
                         "img_size": args.img_size, "aug": aug, "aug_desc": aug_desc, "balance": args.balance,
+                        "train_desc": train_desc,
                         "epoch": epoch, "epochs": args.epochs}, out_dir / "best.pt")
             print(f"  -> best.pt 저장 (검증 balanced acc {best:.1%})")
     minutes = (time.time() - start) / 60

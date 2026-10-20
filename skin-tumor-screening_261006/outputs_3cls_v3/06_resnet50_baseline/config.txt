@@ -1,0 +1,20 @@
+설정: 원본: 증강 없음 (크기만 224로 맞춤)
+학습: 모델 ResNet50, AdamW lr 0.0001, wd 0.05, cosine, 배치 16, AMP bf16
+
+data: data
+out: outputs_3cls_v3/06_resnet50_baseline
+aug: []
+balance: none
+arch: resnet50
+epochs: 50
+img_size: 224
+batch_size: 16
+lr: 0.0001
+weight_decay: 0.05
+no_amp: False
+workers: 4
+no_pretrained: False
+AMP 실제 사용: True
+클래스 가중치: [0.88, 1.26, 0.86]
+best epoch: 40 (검증 balanced acc 76.0%)
+총 학습 시간: 9.6분
